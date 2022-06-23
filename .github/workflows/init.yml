@@ -1,0 +1,36 @@
+name: update fleet files on master branch creation
+on:
+  create:
+
+jobs:
+  template-update:
+    runs-on: ubuntu-latest
+    if:  ${{ contains(github.event.ref, 'master') }}
+    steps:
+      - name: checkout master
+        uses: actions/checkout@v2
+        with:
+          ref: master
+      - name: setup python
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.9"
+      - name: generate files from string templates
+        run: |
+          pip install https://codeload.github.com/nebraltd/hm-pyhelper/zip/22e2006
+          pip install pyyaml
+          python .github/workflows/scripts/generate_files.py ${{github.repository}}
+      - name: get variant's docker compose file from helium miner software
+        run: |
+          .github/workflows/scripts/update_files.sh ${{github.repository}}
+      - name: Push updated docker compose and balena.yml files
+        if: success()
+        uses: test-room-7/action-update-file@v1
+        with:
+          branch: master
+          file-path: |
+            balena.yml
+            docker-compose.yml
+            README.md
+          commit-msg: create balena.yml, docker-compose.yml and README.md
+          github-token: ${{ secrets.MR_BUMP }}
